@@ -1,0 +1,70 @@
+# upload-tester
+
+A small web app for testing upload limits, e.g. of reverse proxies, gateways or WAFs in front of it.
+The server has no size limit of its own and answers every upload with the number of bytes it received.
+
+## Features
+
+- Upload a generated payload of any size, in decimal (B, KB, MB, GB, TB) or binary (KiB, MiB, GiB, TiB) units, or send a custom file.
+- Live panel with progress bar, bytes sent by the browser, bytes actually seen by the server, speed and a stopwatch that stops when the request ends. It stays open afterwards, so you can see at which byte count an upload stopped.
+- Slow upload: streams the body at a fixed rate (e.g. 1 KB/s) to hit request and body timeouts. Browsers only allow streamed request bodies over HTTP/2 or HTTP/3, so put a TLS proxy in front when using this.
+- Check maximum: uploads growing payloads (doubling, then bisecting) until one fails and reports the largest accepted size.
+- The server response is shown unchanged, with human-readable sizes next to it. The original response (status, headers, body) is available in a collapsed section.
+
+## Run with Docker
+
+```bash
+docker run --rm -p 8080:8080 ruepp/upload-tester:latest
+```
+
+Then open <http://localhost:8080>.
+
+## Run with Docker Compose
+
+```yaml
+services:
+  upload-tester:
+    image: ruepp/upload-tester:latest
+    container_name: upload-tester
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+```
+
+```bash
+docker compose up -d
+```
+
+## API
+
+| Endpoint | Description |
+| --- | --- |
+| `POST /api/upload` | Reads the whole body without storing it and answers `200` with only the received byte count as plain text, e.g. `1048576`. |
+| `GET /api/upload/:id/progress` | Bytes received so far for an upload that sent the header `X-Upload-Id: <id>`. Kept for 60 seconds after the upload ends. |
+| `GET /api/health` | Health check. |
+
+```bash
+head -c 1G /dev/zero | curl -T - -X POST http://localhost:8080/api/upload
+```
+
+## Configuration
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `8080` | Port the server listens on. |
+
+## Development
+
+Requires Node.js 24 or newer.
+
+```bash
+npm ci
+npm run build      # client (Vite) and server (tsc) into dist/
+npm start          # serves the UI and API on http://localhost:8080
+npm test           # unit tests
+npm run typecheck
+```
+
+For frontend work run `npm run dev` for the server and `npx vite` for the UI with hot reload; Vite proxies `/api` to port 8080.
