@@ -3,6 +3,10 @@
 A small web app for testing upload limits, e.g. of reverse proxies, gateways or WAFs in front of it.
 The server has no size limit of its own and answers every upload with the number of bytes it received.
 
+![Upload result](screenshots/02-upload-result.png)
+
+More screenshots: [screenshots/README.md](screenshots/README.md).
+
 ## Features
 
 - Upload a generated payload of any size, in decimal (B, KB, MB, GB, TB) or binary (KiB, MiB, GiB, TiB) units, or send a custom file.

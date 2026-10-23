@@ -4,3 +4,5 @@ dist
 compose.yml
 Dockerfile
 .dockerignore
+screenshots
+README.md

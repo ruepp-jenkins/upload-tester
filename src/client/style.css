@@ -131,11 +131,11 @@ progress::-webkit-progress-bar { background: var(--surface-2); }
 progress::-webkit-progress-value { background: var(--accent); border-radius: 999px; transition: width .1s linear; }
 progress::-moz-progress-bar { background: var(--accent); border-radius: 999px; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .75rem; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: .75rem; }
 .stat { background: var(--surface-2); border-radius: 10px; padding: .65rem .85rem; min-width: 0; }
 .stat.wide { grid-column: 1 / -1; }
 .stat .label { margin: 0 0 .1rem; text-transform: uppercase; letter-spacing: .04em; font-size: .7rem; }
-.stat > span:last-child { display: block; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stat > span:last-child { display: block; font-variant-numeric: tabular-nums; overflow-wrap: break-word; }
 
 #verdict { padding: .7rem .9rem; border-radius: 10px; font-weight: 600; }
 #verdict.ok { background: var(--ok-bg); color: var(--ok); }

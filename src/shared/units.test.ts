@@ -30,5 +30,7 @@ describe('formatBytes', () => {
   it('formats both systems', () => {
     expect(formatBytes(1_048_576)).toEqual({ decimal: '1.05 MB', binary: '1.00 MiB' });
     expect(formatBytes(999)).toEqual({ decimal: '999 B', binary: '999 B' });
+    expect(formatBytes(123.456789123)).toEqual({ decimal: '123 B', binary: '123 B' });
+    expect(formatBytes(1234567.891234)).toEqual({ decimal: '1.23 MB', binary: '1.18 MiB' });
   });
 });

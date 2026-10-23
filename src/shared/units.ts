@@ -33,7 +33,8 @@ function format(bytes: number, base: number, labels: readonly string[]): string 
     value /= base;
     i++;
   }
-  return `${i === 0 ? value : value.toFixed(2)} ${labels[i]}`;
+  // Whole bytes (a speed can be fractional), otherwise at most two decimals.
+  return `${i === 0 ? Math.round(value) : value.toFixed(2)} ${labels[i]}`;
 }
 
 /** Human-readable representation in both decimal (SI) and binary (IEC) units. */
