@@ -41,6 +41,8 @@ docker compose up -d
 
 ## API
 
+Paths below are relative to `BASE_PATH`.
+
 | Endpoint | Description |
 | --- | --- |
 | `POST /api/upload` | Reads the whole body without storing it and answers `200` with only the received byte count as plain text, e.g. `1048576`. |
@@ -57,6 +59,7 @@ head -c 1G /dev/zero | curl -T - -X POST http://localhost:8080/api/upload
 | Variable | Default | Description |
 | --- | --- | --- |
 | `PORT` | `8080` | HTTP port. |
+| `BASE_PATH` | `/` | Path the UI and API are served under, and only there, e.g. `/upload/tester`. `/upload/tester` redirects to `/upload/tester/`. |
 | `HTTPS_PORT` | `8443` | HTTPS/HTTP2 port with a self-signed certificate created at startup. `0` disables it. |
 
 ## Development

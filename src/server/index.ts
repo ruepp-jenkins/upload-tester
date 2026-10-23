@@ -1,13 +1,15 @@
 import { generate } from 'selfsigned';
-import { buildApp } from './app.js';
+import { buildApp, normalizeBasePath } from './app.js';
 
 const port = Number(process.env.PORT ?? 8080);
 // Browsers only allow streamed request bodies (the slow-upload test) over HTTP/2, which they only speak over TLS.
 // 0 switches the HTTPS listener off.
 const httpsPort = Number(process.env.HTTPS_PORT ?? 8443);
+// Everything is served below this path only, e.g. BASE_PATH=/upload/tester. Default: the root.
+const basePath = normalizeBasePath(process.env.BASE_PATH);
 
 try {
-  const http = await buildApp({ httpsPort: httpsPort > 0 ? httpsPort : null });
+  const http = await buildApp({ basePath, httpsPort: httpsPort > 0 ? httpsPort : null });
   await http.listen({ port, host: '0.0.0.0' });
 
   if (httpsPort > 0) {
@@ -17,7 +19,7 @@ try {
       algorithm: 'sha256',
       extensions: [{ name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }],
     });
-    const https = await buildApp({ httpsPort, https: { key: pems.private, cert: pems.cert } });
+    const https = await buildApp({ basePath, httpsPort, https: { key: pems.private, cert: pems.cert } });
     await https.listen({ port: httpsPort, host: '0.0.0.0' });
     https.log.info('HTTPS/HTTP2 listener uses a self-signed certificate; accept the browser warning once');
   }

@@ -178,7 +178,7 @@ function sendXhr(body: Blob, id: string, onSent: (n: number) => void, signal: Ab
     xhr.onerror = () => done('Network error: connection closed or blocked before a response arrived');
     xhr.onabort = () => done('Aborted');
     signal.addEventListener('abort', () => xhr.abort(), { once: true });
-    xhr.open('POST', '/api/upload');
+    xhr.open('POST', 'api/upload');
     xhr.setRequestHeader('X-Upload-Id', id);
     xhr.send(body);
   });
@@ -186,7 +186,7 @@ function sendXhr(body: Blob, id: string, onSent: (n: number) => void, signal: Ab
 
 async function sendStream(body: Blob, rate: number, id: string, onSent: (n: number) => void, signal: AbortSignal): Promise<RawResult> {
   try {
-    const res = await fetch('/api/upload', {
+    const res = await fetch('api/upload', {
       method: 'POST',
       headers: { 'X-Upload-Id': id, 'Content-Type': 'application/octet-stream' },
       body: throttledStream(body, rate, onSent, signal),
@@ -246,7 +246,7 @@ async function runUpload(body: Blob, slowRate: number | null, signal: AbortSigna
   };
   const poll = async () => {
     try {
-      const res = await fetch(`/api/upload/${id}/progress`, { cache: 'no-store' });
+      const res = await fetch(`api/upload/${id}/progress`, { cache: 'no-store' });
       if (res.ok) serverSeen = ((await res.json()) as { received: number }).received;
     } catch {
       /* the server may be unreachable mid-test; keep the last value */
