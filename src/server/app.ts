@@ -2,6 +2,11 @@ import { fileURLToPath } from 'node:url';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 
+// The point of this tool is to find out when *something else* hangs up, so the app never does it first: no
+// timeout is shorter than a day. (Node and Fastify default to 5 minutes for a whole request, 60 s for the
+// headers, and 72 s for idle keep-alive connections and HTTP/2 sessions.)
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 const clientDir = fileURLToPath(new URL('../client', import.meta.url));
 
 interface Progress {
@@ -33,12 +38,18 @@ export async function buildApp(
     bodyLimit: Number.MAX_SAFE_INTEGER,
     connectionTimeout: 0,
     requestTimeout: 0,
+    keepAliveTimeout: DAY_MS,
+    http2SessionTimeout: DAY_MS,
   };
   const app = (
     options.https
       ? Fastify({ ...common, http2: true, https: { ...options.https, allowHTTP1: true } })
       : Fastify(common)
   ) as unknown as FastifyInstance;
+  // 0 disables the limits on receiving the headers and the whole request. Fastify's options only reach the plain
+  // HTTP server; the HTTP/2 server (which also answers HTTP/1.1 clients) keeps Node's defaults without this.
+  app.server.headersTimeout = 0;
+  app.server.requestTimeout = 0;
 
   if (options.basePath) {
     // The page's relative URLs resolve against a trailing slash, so /base must lead to /base/.
