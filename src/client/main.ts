@@ -190,7 +190,7 @@ async function sendStream(body: Blob, rate: number, id: string, onSent: (n: numb
       text: '',
       error: aborted
         ? 'Aborted'
-        : `Network error: ${e instanceof Error ? e.message : String(e)} (streamed uploads need HTTP/2 or HTTP/3, or the connection was closed/blocked)`,
+        : `Network error: ${e instanceof Error ? e.message : String(e)} (streamed uploads need HTTP/2 or HTTP/3 - open the page over HTTPS - or the connection was closed/blocked)`,
     };
   }
 }

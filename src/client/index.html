@@ -59,7 +59,8 @@
         </div>
         <p id="slow-hint" class="note" hidden>
           The body is streamed at a fixed rate (chunked, without Content-Length). Browsers only allow streamed request
-          bodies over HTTP/2 or HTTP/3, so put a TLS proxy in front when testing this.
+          bodies over HTTP/2 or HTTP/3, i.e. over HTTPS.
+          <span id="https-hint"></span>
         </p>
 
         <div class="actions">

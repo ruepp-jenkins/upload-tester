@@ -155,3 +155,4 @@ pre { margin: 0; padding: .9rem; border-top: 1px solid var(--border); background
   .btn { flex: 1; }
   .top p { display: none; }
 }
+.note a { color: var(--accent); font-weight: 600; }

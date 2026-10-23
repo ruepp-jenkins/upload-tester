@@ -1,67 +1,27 @@
-import { fileURLToPath } from 'node:url';
-import Fastify from 'fastify';
-import fastifyStatic from '@fastify/static';
+import { generate } from 'selfsigned';
+import { buildApp } from './app.js';
 
 const port = Number(process.env.PORT ?? 8080);
-const clientDir = fileURLToPath(new URL('../client', import.meta.url));
-
-const app = Fastify({
-  logger: true,
-  // No application-level limit: limits under test come from the infrastructure.
-  bodyLimit: Number.MAX_SAFE_INTEGER,
-  connectionTimeout: 0,
-  requestTimeout: 0,
-});
-
-// Hand every body (whatever its content type) to the route as an unparsed stream.
-app.addContentTypeParser('*', (_request, payload, done) => done(null, payload));
-
-app.get('/api/health', async () => ({ status: 'ok' }));
-
-interface Progress {
-  received: number;
-  done: boolean;
-  aborted: boolean;
-}
-
-// Live byte counters per client-supplied upload id, so the UI can show how far the server really got.
-const uploads = new Map<string, Progress>();
-
-app.get<{ Params: { id: string } }>('/api/upload/:id/progress', async (request, reply) => {
-  const progress = uploads.get(request.params.id);
-  if (!progress) return reply.code(404).send({ error: 'unknown upload id' });
-  return progress;
-});
-
-app.post('/api/upload', async (request, reply) => {
-  const started = performance.now();
-  const id = request.headers['x-upload-id'];
-  const progress: Progress = { received: 0, done: false, aborted: false };
-  if (typeof id === 'string' && id.length <= 64) uploads.set(id, progress);
-  try {
-    for await (const chunk of request.raw as AsyncIterable<Buffer>) {
-      progress.received += chunk.length;
-    }
-  } catch (err) {
-    progress.aborted = true;
-    request.log.warn({ received: progress.received, err }, 'upload aborted');
-    return reply.hijack();
-  } finally {
-    progress.done = true;
-    if (typeof id === 'string') setTimeout(() => uploads.delete(id), 60_000).unref();
-  }
-  request.log.info({ received: progress.received }, 'upload received');
-  return reply
-    .header('X-Duration-Ms', Math.round(performance.now() - started))
-    .type('text/plain')
-    .send(String(progress.received));
-});
-
-await app.register(fastifyStatic, { root: clientDir });
+// Browsers only allow streamed request bodies (the slow-upload test) over HTTP/2, which they only speak over TLS.
+// 0 switches the HTTPS listener off.
+const httpsPort = Number(process.env.HTTPS_PORT ?? 8443);
 
 try {
-  await app.listen({ port, host: '0.0.0.0' });
+  const http = await buildApp({ httpsPort: httpsPort > 0 ? httpsPort : null });
+  await http.listen({ port, host: '0.0.0.0' });
+
+  if (httpsPort > 0) {
+    const pems = await generate([{ name: 'commonName', value: 'upload-tester' }], {
+      notAfterDate: new Date(Date.now() + 10 * 365 * 24 * 3600 * 1000),
+      keySize: 2048,
+      algorithm: 'sha256',
+      extensions: [{ name: 'subjectAltName', altNames: [{ type: 2, value: 'localhost' }, { type: 7, ip: '127.0.0.1' }] }],
+    });
+    const https = await buildApp({ httpsPort, https: { key: pems.private, cert: pems.cert } });
+    await https.listen({ port: httpsPort, host: '0.0.0.0' });
+    https.log.info('HTTPS/HTTP2 listener uses a self-signed certificate; accept the browser warning once');
+  }
 } catch (err) {
-  app.log.error(err);
+  console.error(err);
   process.exit(1);
 }
