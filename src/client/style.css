@@ -1,0 +1,26 @@
+:root {
+  color-scheme: light dark;
+  --muted: #6b7280;
+  --ok: #15803d;
+  --bad: #b91c1c;
+  --border: #8884;
+  font-family: system-ui, sans-serif;
+}
+body { margin: 0; }
+main { max-width: 42rem; margin: 2rem auto; padding: 0 1rem; }
+.row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; margin: 1rem 0; }
+.tabs { display: flex; gap: 1.5rem; }
+.muted, .hint { color: var(--muted); }
+input[type=number] { width: 10rem; }
+input, select, button { font: inherit; padding: .4rem .6rem; }
+progress { width: 100%; }
+table { border-collapse: collapse; margin: .5rem 0; }
+th { text-align: left; padding: .25rem 1rem .25rem 0; font-weight: 600; }
+#verdict { font-weight: 600; margin: .5rem 0; }
+#verdict.ok { color: var(--ok); }
+#verdict.bad { color: var(--bad); }
+pre { background: var(--border); padding: .75rem; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+.stopwatch { font-variant-numeric: tabular-nums; font-size: 1.25rem; font-weight: 600; }
+#max-section, #live, #result { border-top: 1px solid var(--border); margin-top: 1.5rem; }
+td { font-variant-numeric: tabular-nums; }
+.row label { display: inline-flex; gap: .4rem; align-items: center; }
