@@ -7,86 +7,123 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <header class="top">
+      <div class="top-inner">
+        <svg class="logo" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div>
+          <h1>Upload Tester</h1>
+          <p>Send a payload to <code>/api/upload</code> and see how many bytes the server really received.</p>
+        </div>
+      </div>
+    </header>
+
     <main>
-      <h1>Upload Tester</h1>
-      <p class="hint">Send a payload to <code>/api/upload</code>. The server answers with the number of bytes it received.</p>
-
-      <form id="form">
-        <div class="tabs" role="radiogroup">
-          <label><input type="radio" name="mode" value="generated" checked /> Generated payload</label>
-          <label><input type="radio" name="mode" value="file" /> Custom file</label>
+      <form id="form" class="card">
+        <div class="card-head">
+          <h2>Upload</h2>
+          <div class="segmented" role="radiogroup" aria-label="Payload type">
+            <label><input type="radio" name="mode" value="generated" checked /><span>Generated</span></label>
+            <label><input type="radio" name="mode" value="file" /><span>Custom file</span></label>
+          </div>
         </div>
 
-        <div id="generated-fields" class="row">
-          <input id="size" type="number" min="0" step="any" value="1" aria-label="Size" />
-          <select id="unit" aria-label="Unit"></select>
-          <span id="size-preview" class="muted"></span>
+        <div id="generated-fields" class="field">
+          <label class="label" for="size">Size</label>
+          <div class="group">
+            <input id="size" type="number" min="0" step="any" value="1" inputmode="decimal" />
+            <select id="unit" aria-label="Unit"></select>
+          </div>
+          <span id="size-preview" class="preview"></span>
         </div>
 
-        <div id="file-fields" class="row" hidden>
+        <div id="file-fields" class="field" hidden>
+          <label class="label" for="file">File</label>
           <input id="file" type="file" />
-          <span id="file-preview" class="muted"></span>
+          <span id="file-preview" class="preview"></span>
         </div>
 
-        <div class="row">
-          <label><input id="slow" type="checkbox" /> Slow upload</label>
-          <input id="rate" type="number" min="1" step="any" value="1" aria-label="Rate" />
-          <select id="rate-unit" aria-label="Rate unit"></select>
-          <span class="muted">per second</span>
-          <span id="eta" class="muted"></span>
+        <div class="slow">
+          <label class="switch">
+            <input id="slow" type="checkbox" />
+            <span class="track"></span>
+            <span class="switch-text"><strong>Slow upload</strong><small>Throttle the body to hit request timeouts</small></span>
+          </label>
+          <div class="field">
+            <label class="label" for="rate">Rate per second</label>
+            <div class="group">
+              <input id="rate" type="number" min="1" step="any" value="1" inputmode="decimal" />
+              <select id="rate-unit" aria-label="Rate unit"></select>
+            </div>
+            <span id="eta" class="preview"></span>
+          </div>
         </div>
-        <p id="slow-hint" class="hint" hidden>
-          Streams the body at a fixed rate (chunked, no Content-Length) to hit request/body timeouts of proxies and servers.
-          Browsers only allow streamed request bodies over HTTP/2 or HTTP/3, so put a TLS proxy in front when testing this.
+        <p id="slow-hint" class="note" hidden>
+          The body is streamed at a fixed rate (chunked, without Content-Length). Browsers only allow streamed request
+          bodies over HTTP/2 or HTTP/3, so put a TLS proxy in front when testing this.
         </p>
 
-        <div class="row">
-          <button id="send" type="submit">Upload</button>
-          <button id="stop" type="button" hidden>Abort</button>
+        <div class="actions">
+          <button id="send" class="btn primary" type="submit">Start upload</button>
+          <button id="stop" class="btn danger" type="button" hidden>Abort</button>
         </div>
       </form>
 
-      <section id="max-section">
-        <h2>Find maximum size</h2>
-        <p class="hint">
-          Uploads growing generated payloads (doubling, then bisecting) until the first one fails, and reports the largest size that went through.
-        </p>
-        <div class="row">
-          <label>Try up to <input id="max-cap" type="number" min="1" step="any" value="1" /></label>
-          <select id="max-cap-unit" aria-label="Upper bound unit"></select>
-          <label>Precision <input id="max-precision" type="number" min="1" step="1" value="1" /></label>
-          <select id="max-precision-unit" aria-label="Precision unit"></select>
-          <button id="max-start" type="button">Check maximum</button>
+      <section id="live" class="card" hidden>
+        <div class="card-head">
+          <h2>Live</h2>
+          <div id="live-elapsed" class="stopwatch" title="Stopwatch"></div>
         </div>
-        <div id="max-log" class="muted"></div>
-        <div id="max-result"></div>
-      </section>
-
-      <section id="live" hidden>
-        <h2>Live</h2>
         <progress id="progress" max="100" value="0"></progress>
-        <table>
-          <tr><th>Browser sent</th><td id="live-sent"></td></tr>
-          <tr><th>Server saw</th><td id="live-server"></td></tr>
-          <tr><th>Speed</th><td id="live-speed"></td></tr>
-          <tr><th>Stopwatch</th><td id="live-elapsed" class="stopwatch"></td></tr>
-          <tr><th>State</th><td id="live-state"></td></tr>
-        </table>
+        <div class="stats">
+          <div class="stat wide"><span class="label">Browser sent</span><span id="live-sent"></span></div>
+          <div class="stat wide"><span class="label">Server saw</span><span id="live-server"></span></div>
+          <div class="stat"><span class="label">Speed</span><span id="live-speed"></span></div>
+          <div class="stat"><span class="label">State</span><span id="live-state"></span></div>
+        </div>
       </section>
 
-      <section id="result" hidden>
-        <h2>Result</h2>
+      <section id="result" class="card" hidden>
+        <div class="card-head"><h2>Result</h2></div>
         <div id="verdict"></div>
-        <table>
-          <tr><th>Sent</th><td id="sent"></td></tr>
-          <tr><th>Server received</th><td id="received"></td></tr>
-          <tr><th>HTTP status</th><td id="status"></td></tr>
-          <tr><th>Duration</th><td id="duration"></td></tr>
-        </table>
+        <div class="stats">
+          <div class="stat wide"><span class="label">Sent</span><span id="sent"></span></div>
+          <div class="stat wide"><span class="label">Server received</span><span id="received"></span></div>
+          <div class="stat"><span class="label">HTTP status</span><span id="status"></span></div>
+          <div class="stat"><span class="label">Duration</span><span id="duration"></span></div>
+        </div>
         <details id="raw">
           <summary>Original response</summary>
           <pre id="raw-text"></pre>
         </details>
+      </section>
+
+      <section id="max-section" class="card">
+        <div class="card-head"><h2>Find maximum size</h2></div>
+        <p class="note">
+          Uploads growing generated payloads (doubling, then bisecting) until the first one fails and reports the
+          largest size that went through.
+        </p>
+        <div class="fields">
+          <div class="field">
+            <label class="label" for="max-cap">Try up to</label>
+            <div class="group">
+              <input id="max-cap" type="number" min="1" step="any" value="1" inputmode="decimal" />
+              <select id="max-cap-unit" aria-label="Upper bound unit"></select>
+            </div>
+          </div>
+          <div class="field">
+            <label class="label" for="max-precision">Precision</label>
+            <div class="group">
+              <input id="max-precision" type="number" min="1" step="1" value="1" inputmode="numeric" />
+              <select id="max-precision-unit" aria-label="Precision unit"></select>
+            </div>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="max-start" class="btn" type="button">Check maximum</button>
+        </div>
+        <div id="max-log"></div>
+        <div id="max-result"></div>
       </section>
     </main>
     <script type="module" src="./main.ts"></script>
