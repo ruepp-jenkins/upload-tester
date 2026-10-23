@@ -156,3 +156,5 @@ pre { margin: 0; padding: .9rem; border-top: 1px solid var(--border); background
   .top p { display: none; }
 }
 .note a { color: var(--accent); font-weight: 600; }
+.stat .main, .stat .sub { display: block; }
+.stat .sub { margin-top: .1rem; font: .8rem/1.4 var(--mono); color: var(--muted); }

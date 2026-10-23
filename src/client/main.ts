@@ -26,6 +26,21 @@ const human = (bytes: number) => {
   return decimal === binary ? decimal : `${binary} / ${decimal}`;
 };
 const withHuman = (bytes: number) => `${bytes} B (${human(bytes)})`;
+
+/** Fills a stat tile with a human-readable headline and the exact figures on a second line. */
+function setStat(id: string, main: string, sub = '') {
+  const head = document.createElement('span');
+  head.className = 'main';
+  head.textContent = main;
+  const nodes: HTMLElement[] = [head];
+  if (sub) {
+    const line = document.createElement('span');
+    line.className = 'sub';
+    line.textContent = sub;
+    nodes.push(line);
+  }
+  $(id).replaceChildren(...nodes);
+}
 const mode = () => (form.elements.namedItem('mode') as RadioNodeList).value;
 
 function formatDuration(ms: number): string {
@@ -213,17 +228,18 @@ async function runUpload(body: Blob, slowRate: number | null, signal: AbortSigna
     const ms = finished ? frozenMs : performance.now() - started;
     const seconds = Math.max(ms / 1000, 0.001);
     progress.value = body.size === 0 ? 100 : (clientSent / body.size) * 100;
-    $('live-sent').textContent = `${withHuman(clientSent)} of ${withHuman(body.size)} (${progress.value.toFixed(1)}%)`;
-    $('live-server').textContent = serverSeen === null ? '–' : withHuman(serverSeen);
+    setStat('live-sent', `${human(clientSent)} of ${human(body.size)} (${progress.value.toFixed(1)}%)`, `${clientSent} of ${body.size} B`);
+    if (serverSeen === null) setStat('live-server', '–');
+    else setStat('live-server', human(serverSeen), `${serverSeen} B`);
     const average = `${human(clientSent / seconds)}/s average`;
     if (finished) {
-      $('live-speed').textContent = average;
+      setStat('live-speed', average);
     } else {
       samples.push({ ms, bytes: clientSent });
       while (samples.length > 2 && ms - samples[0]!.ms > 2000) samples.shift();
       const first = samples[0]!;
       const current = ms > first.ms ? ((clientSent - first.bytes) / (ms - first.ms)) * 1000 : 0;
-      $('live-speed').textContent = `${human(current)}/s now · ${average}`;
+      setStat('live-speed', `${human(current)}/s now`, average);
     }
     $('live-elapsed').textContent = formatDuration(ms);
     $('live-state').textContent = state;
@@ -276,9 +292,10 @@ function showResult(o: Outcome) {
       : o.received !== null && o.raw.status < 300
         ? '✘ Byte count mismatch'
         : `✘ Upload failed (HTTP ${o.raw.status})`;
-  $('sent').textContent = withHuman(o.sent);
+  setStat('sent', human(o.sent), `${o.sent} B`);
   // The server's answer is shown 1:1, exactly as it came back.
-  $('received').textContent = o.received === null ? '–' : withHuman(o.received);
+  if (o.received === null) setStat('received', '–');
+  else setStat('received', human(o.received), `${o.received} B`);
   $('status').textContent = o.raw.error ? '–' : `${o.raw.status} ${o.raw.statusText}`;
   $('duration').textContent = formatDuration(o.durationMs);
   $('avg-speed').textContent = `${human(o.avgBytesPerSecond)}/s`;
