@@ -108,9 +108,9 @@ pipeline {
         DOCKER_PLATFORMS = 'host'
 
         // The architectures that are built and joined into one manifest list by
-        // scripts/docker_manifest.sh. Currently amd64 only; to build arm64 again (on the
-        // 'oracle_docker' agent), change this to 'amd64 arm64' — nothing else needs to change.
-        MANIFEST_ARCHS = 'amd64'
+        // scripts/docker_manifest.sh. arm64 is built natively on the 'oracle_docker' agent; to
+        // switch it off again, change this to 'amd64' — nothing else needs to change.
+        MANIFEST_ARCHS = 'amd64 arm64'
     }
 
     triggers {
