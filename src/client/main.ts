@@ -18,7 +18,7 @@ for (const select of [unitSelect, rateUnit, $<HTMLSelectElement>('max-cap-unit')
 }
 unitSelect.value = 'MiB';
 rateUnit.value = 'KB';
-$<HTMLSelectElement>('max-cap-unit').value = 'GiB';
+$<HTMLSelectElement>('max-cap-unit').value = 'TiB';
 $<HTMLSelectElement>('max-precision-unit').value = 'KiB';
 
 const human = (bytes: number) => {
@@ -70,14 +70,19 @@ function refresh() {
   sendButton.disabled = size === null || (slow && rate === null) || busy;
 }
 
-/** Builds a body of exactly `size` bytes without allocating it all (the same chunk is referenced repeatedly). */
+/**
+ * Builds a body of exactly `size` bytes without allocating it all: blobs only reference their parts, so a
+ * 1 MiB chunk is reused for a 1 GiB block, which is reused for the bulk of the payload (1 TiB is ~1000 parts).
+ */
 function generatePayload(size: number): Blob {
-  const chunkSize = 1024 * 1024;
-  const parts: BlobPart[] = [];
-  const chunk = new Blob([new Uint8Array(Math.min(size, chunkSize))]);
-  for (let remaining = size; remaining > 0; remaining -= chunkSize) {
-    parts.push(remaining >= chunkSize ? chunk : chunk.slice(0, remaining));
-  }
+  const MiB = 1024 * 1024;
+  const GiB = 1024 * MiB;
+  const chunk = new Blob([new Uint8Array(Math.min(size, MiB))]);
+  const block = size >= GiB ? new Blob(Array<Blob>(1024).fill(chunk)) : chunk;
+  const parts: BlobPart[] = Array<Blob>(Math.floor(size / GiB)).fill(block);
+  let rest = size % GiB;
+  for (; rest >= MiB; rest -= MiB) parts.push(chunk);
+  if (rest > 0) parts.push(chunk.slice(0, rest));
   return new Blob(parts, { type: 'application/octet-stream' });
 }
 
@@ -136,6 +141,7 @@ interface Outcome {
   serverSeen: number | null;
   clientSent: number;
   durationMs: number;
+  avgBytesPerSecond: number;
 }
 
 let busy = false;
@@ -198,6 +204,8 @@ async function runUpload(body: Blob, slowRate: number | null, signal: AbortSigna
   let state = 'Uploading…';
   let finished = false;
   let frozenMs = 0;
+  // Recent (time, bytes) samples; the current speed is measured over the last couple of seconds.
+  const samples: { ms: number; bytes: number }[] = [];
 
   $('live').hidden = false;
   const progress = $<HTMLProgressElement>('progress');
@@ -207,7 +215,16 @@ async function runUpload(body: Blob, slowRate: number | null, signal: AbortSigna
     progress.value = body.size === 0 ? 100 : (clientSent / body.size) * 100;
     $('live-sent').textContent = `${withHuman(clientSent)} of ${withHuman(body.size)} (${progress.value.toFixed(1)}%)`;
     $('live-server').textContent = serverSeen === null ? '–' : withHuman(serverSeen);
-    $('live-speed').textContent = `${human(clientSent / seconds)}/s average`;
+    const average = `${human(clientSent / seconds)}/s average`;
+    if (finished) {
+      $('live-speed').textContent = average;
+    } else {
+      samples.push({ ms, bytes: clientSent });
+      while (samples.length > 2 && ms - samples[0]!.ms > 2000) samples.shift();
+      const first = samples[0]!;
+      const current = ms > first.ms ? ((clientSent - first.bytes) / (ms - first.ms)) * 1000 : 0;
+      $('live-speed').textContent = `${human(current)}/s now · ${average}`;
+    }
     $('live-elapsed').textContent = formatDuration(ms);
     $('live-state').textContent = state;
   };
@@ -245,7 +262,7 @@ async function runUpload(body: Blob, slowRate: number | null, signal: AbortSigna
       : `Finished with HTTP ${raw.status}`;
   if (!ok && serverSeen !== null) state += ` – server had seen ${serverSeen} B`;
   render();
-  return { ok, sent: body.size, received, raw, serverSeen, clientSent, durationMs: frozenMs };
+  return { ok, sent: body.size, received, raw, serverSeen, clientSent, durationMs: frozenMs, avgBytesPerSecond: clientSent / Math.max(frozenMs / 1000, 0.001) };
 }
 
 function showResult(o: Outcome) {
@@ -264,6 +281,7 @@ function showResult(o: Outcome) {
   $('received').textContent = o.received === null ? '–' : withHuman(o.received);
   $('status').textContent = o.raw.error ? '–' : `${o.raw.status} ${o.raw.statusText}`;
   $('duration').textContent = formatDuration(o.durationMs);
+  $('avg-speed').textContent = `${human(o.avgBytesPerSecond)}/s`;
   $('raw-text').textContent = o.raw.error
     ? o.raw.error
     : `HTTP ${o.raw.status} ${o.raw.statusText}\n${o.raw.headers}\n${o.raw.text}`;
